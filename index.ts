@@ -1,4 +1,5 @@
 import { gql, GraphQLClient } from "graphql-request";
+import { json2csv } from "json-2-csv";
 
 const key = Bun.env.API_KEY;
 const client = new GraphQLClient("https://api-prod.omnivore.app/api/graphql", {
@@ -8,20 +9,8 @@ const client = new GraphQLClient("https://api-prod.omnivore.app/api/graphql", {
 });
 
 const getArticles = gql`
-  query Search(
-    $after: String
-    $first: Int
-    $query: String
-    $includeContent: Boolean
-    $format: String
-  ) {
-    search(
-      after: $after
-      first: $first
-      query: $query
-      includeContent: $includeContent
-      format: $format
-    ) {
+  query Search($after: String, $first: Int, $query: String) {
+    search(after: $after, first: $first, query: $query) {
       ... on SearchSuccess {
         edges {
           node {
@@ -71,15 +60,43 @@ async function exportArticles() {
     hasNextPage = response.search.pageInfo.hasNextPage;
 
     console.log(
-      `Received...${currentCount} out of ${response.search.pageInfo.totalCount}`,
+      `Received...${currentCount} out of ${response.search.pageInfo.totalCount} articles`,
     );
 
+    // TODO: remove this to do it for every item
     if (currentCount > 30) {
       hasNextPage = false;
     }
   }
 
-  console.log("response", results);
+  Bun.write("exported_articles.json", JSON.stringify(results));
+  return results;
 }
 
-await exportArticles();
+function preProcessArticles(articles) {
+  const result = articles.map((a) => ({
+    ...a,
+    title: a.title.replace(/\n|\r/g, ""),
+    tags: [...a.tags, "from_omnivore"].join(", "),
+    note: a.note ? a.note.replace(/\n|\r/g, "") : "",
+  }));
+  Bun.write("processed_articles.json", JSON.stringify(result));
+  return result;
+}
+
+function convertToCSV(articles) {
+  const csv = json2csv(articles, {
+    delimiter: {
+      field: ",",
+      wrap: '"',
+      eol: "\n",
+    },
+  });
+
+  Bun.write("processed_articles.csv", csv);
+  return csv;
+}
+
+const exportedArticles = await exportArticles();
+const processedArticles = preProcessArticles(exportedArticles);
+convertToCSV(processedArticles);

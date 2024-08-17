@@ -114,11 +114,6 @@ async function exportArticles() {
     console.log(
       `Received...${currentCount} out of ${response.search.pageInfo.totalCount} articles`,
     );
-
-    // TODO: remove this to do it for every item
-    if (currentCount > 30) {
-      hasNextPage = false;
-    }
   }
 
   if (saveIntermediateFiles) {

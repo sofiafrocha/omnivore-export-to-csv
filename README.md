@@ -1,5 +1,9 @@
 # omnivore-to-csv
 
+// TODO: detail options
+
+// explain the context: the default output format is the raindrop one
+
 To install dependencies:
 
 ```bash

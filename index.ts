@@ -80,6 +80,7 @@ function preProcessArticles(articles) {
     tags: [...a.tags, "from_omnivore"].join(", "),
     note: a.note ? a.note.replace(/\n|\r/g, "") : "",
   }));
+
   Bun.write("processed_articles.json", JSON.stringify(result));
   return result;
 }
@@ -100,3 +101,8 @@ function convertToCSV(articles) {
 const exportedArticles = await exportArticles();
 const processedArticles = preProcessArticles(exportedArticles);
 convertToCSV(processedArticles);
+
+// TODO:
+// add the search query as an option --search-query
+// add the description (and other fields) as an option --full-data
+// add a import tag as an option --add-tag

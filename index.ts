@@ -22,13 +22,11 @@ const {
   "full-data": fullData = true,
   "add-tag": addTag = "",
 } = getArgs(Bun.argv);
-
-// TODO:
-// add the search query as an option --search-query
-// add the description (and other fields) as an option --full-data
-// add a import tag as an option --add-tag
-
-console.log("yo ", searchQuery, fullData, addTag);
+console.log("Using the following options: ", {
+  searchQuery,
+  fullData,
+  addTag,
+});
 
 const key = Bun.env.API_KEY;
 const client = new GraphQLClient("https://api-prod.omnivore.app/api/graphql", {
@@ -70,18 +68,24 @@ async function exportArticles() {
   let hasNextPage = true;
   const results = [];
 
+  console.log("Getting articles from the API!");
+
   while (hasNextPage) {
     const response = await client.request(getArticles, {
       query: searchQuery,
       after: currentCount.toString(),
     });
-    const items = response.search.edges.map((e) => ({
-      title: e.node.title,
-      url: e.node.url,
-      note: e.node.description,
-      tags: e.node.labels.map((l) => l.name),
-      created: e.node.createdAt,
-    }));
+    const items = response.search.edges.map((e) => {
+      const { node } = e;
+      return {
+        ...node,
+        title: node.title.replace(/\n|\r/g, ""),
+        description: node.description
+          ? node.description.replace(/\n|\r/g, "")
+          : "",
+        labels: [...node.labels.map((l) => l.name), addTag].join(", "),
+      };
+    });
 
     results.push(...items);
 
@@ -98,18 +102,24 @@ async function exportArticles() {
     }
   }
 
+  console.log("Saving exported articles in JSON...");
   Bun.write("exported_articles.json", JSON.stringify(results));
   return results;
 }
 
 function preProcessArticles(articles) {
-  const result = articles.map((a) => ({
-    ...a,
-    title: a.title.replace(/\n|\r/g, ""),
-    tags: [...a.tags, addTag].join(", "),
-    note: a.note ? a.note.replace(/\n|\r/g, "") : "",
-  }));
+  const result = articles.map((a) => {
+    const processed = {
+      url: a.url,
+      title: a.url,
+      created: a.createdAt,
+      tags: a.labels,
+      note: a.description,
+    };
+    return processed;
+  });
 
+  console.log("Saving partial data in JSON...");
   Bun.write("processed_articles.json", JSON.stringify(result));
   return result;
 }
@@ -123,10 +133,18 @@ function convertToCSV(articles) {
     },
   });
 
+  console.log("Converting to CSV...");
   Bun.write("processed_articles.csv", csv);
   return csv;
 }
 
 const exportedArticles = await exportArticles();
-const processedArticles = preProcessArticles(exportedArticles);
-convertToCSV(processedArticles);
+
+if (fullData) {
+  convertToCSV(exportedArticles);
+} else {
+  const processedArticles = preProcessArticles(exportedArticles);
+  convertToCSV(processedArticles);
+}
+
+console.log("Done!");

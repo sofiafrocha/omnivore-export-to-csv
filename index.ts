@@ -1,6 +1,35 @@
 import { gql, GraphQLClient } from "graphql-request";
 import { json2csv } from "json-2-csv";
 
+function getArgs(argv) {
+  const result = {};
+
+  argv.splice(0, 2);
+  argv.forEach((arg, index) => {
+    if (arg.substring(0, 2) === "--") {
+      const key = arg.substring(2, arg.length);
+      const value =
+        argv[index + 1].substring(0, 2) === "--" ? true : argv[index + 1];
+      result[key] = value;
+    }
+  });
+
+  return result;
+}
+
+const {
+  "search-query": searchQuery = "",
+  "full-data": fullData = true,
+  "add-tag": addTag = "",
+} = getArgs(Bun.argv);
+
+// TODO:
+// add the search query as an option --search-query
+// add the description (and other fields) as an option --full-data
+// add a import tag as an option --add-tag
+
+console.log("yo ", searchQuery, fullData, addTag);
+
 const key = Bun.env.API_KEY;
 const client = new GraphQLClient("https://api-prod.omnivore.app/api/graphql", {
   headers: {
@@ -43,7 +72,7 @@ async function exportArticles() {
 
   while (hasNextPage) {
     const response = await client.request(getArticles, {
-      query: "-label:from_raindrop",
+      query: searchQuery,
       after: currentCount.toString(),
     });
     const items = response.search.edges.map((e) => ({
@@ -77,7 +106,7 @@ function preProcessArticles(articles) {
   const result = articles.map((a) => ({
     ...a,
     title: a.title.replace(/\n|\r/g, ""),
-    tags: [...a.tags, "from_omnivore"].join(", "),
+    tags: [...a.tags, addTag].join(", "),
     note: a.note ? a.note.replace(/\n|\r/g, "") : "",
   }));
 
@@ -101,8 +130,3 @@ function convertToCSV(articles) {
 const exportedArticles = await exportArticles();
 const processedArticles = preProcessArticles(exportedArticles);
 convertToCSV(processedArticles);
-
-// TODO:
-// add the search query as an option --search-query
-// add the description (and other fields) as an option --full-data
-// add a import tag as an option --add-tag

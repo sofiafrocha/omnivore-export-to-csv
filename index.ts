@@ -128,7 +128,7 @@ function preProcessArticles(articles) {
   const result = articles.map((a) => {
     const processed = {
       url: a.url,
-      title: a.url,
+      title: a.title,
       created: a.createdAt,
       tags: a.labels,
       note: a.description,

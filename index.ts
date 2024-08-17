@@ -1,6 +1,8 @@
 import { gql, GraphQLClient } from "graphql-request";
 import { json2csv } from "json-2-csv";
 
+const outputFilename = "articles_from_omnivore.csv";
+
 function getArgs(argv) {
   const result = {};
 
@@ -21,11 +23,13 @@ const {
   "search-query": searchQuery = "",
   "full-data": fullData = true,
   "add-tag": addTag = "",
+  "save-intermediate-files": saveIntermediateFiles = false,
 } = getArgs(Bun.argv);
 console.log("Using the following options: ", {
   searchQuery,
   fullData,
   addTag,
+  saveIntermediateFiles,
 });
 
 const key = Bun.env.API_KEY;
@@ -102,8 +106,11 @@ async function exportArticles() {
     }
   }
 
-  console.log("Saving exported articles in JSON...");
-  Bun.write("exported_articles.json", JSON.stringify(results));
+  if (saveIntermediateFiles) {
+    console.log("Saving exported articles in JSON...");
+    Bun.write("exported_articles.json", JSON.stringify(results));
+  }
+
   return results;
 }
 
@@ -119,8 +126,11 @@ function preProcessArticles(articles) {
     return processed;
   });
 
-  console.log("Saving partial data in JSON...");
-  Bun.write("processed_articles.json", JSON.stringify(result));
+  if (saveIntermediateFiles) {
+    console.log("Saving partial data in JSON...");
+    Bun.write("processed_articles.json", JSON.stringify(result));
+  }
+
   return result;
 }
 
@@ -134,7 +144,7 @@ function convertToCSV(articles) {
   });
 
   console.log("Converting to CSV...");
-  Bun.write("processed_articles.csv", csv);
+  Bun.write(outputFilename, csv);
   return csv;
 }
 
@@ -148,3 +158,4 @@ if (fullData) {
 }
 
 console.log("Done!");
+console.log("Output file: ", outputFilename);

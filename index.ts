@@ -10,7 +10,7 @@ function getArgs(argv) {
       const key = arg.substring(2, arg.length);
       const value =
         argv[index + 1].substring(0, 2) === "--" ? true : argv[index + 1];
-      result[key] = value;
+      result[key] = value === "false" ? false : value;
     }
   });
 

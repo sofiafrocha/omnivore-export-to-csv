@@ -52,6 +52,20 @@ const getArticles = gql`
             labels {
               name
             }
+            slug
+            id
+            pageType
+            isArchived
+            author
+            quote
+            annotation
+            color
+            subscription
+            highlights {
+              quote
+            }
+            wordsCount
+            folder
           }
         }
         pageInfo {
@@ -88,6 +102,7 @@ async function exportArticles() {
           ? node.description.replace(/\n|\r/g, "")
           : "",
         labels: [...node.labels.map((l) => l.name), addTag].join(", "),
+        highlights: node.highlights.map((h) => h.quote),
       };
     });
 
